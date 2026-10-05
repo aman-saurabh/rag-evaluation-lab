@@ -28,6 +28,3 @@ Start with [docs/00-start-here.md](docs/00-start-here.md). It explains every wor
 | 10 | Findings: what did you learn? | [phase-10-findings.md](docs/phase-10-findings.md) |
 | 11 | Unit tests (optional practice, only at the very end) | [phase-11-tests.md](docs/phase-11-tests.md) |
 
-## What is deliberately left out
-
-Reading scanned documents (OCR), Word/Excel/PowerPoint files, user logins, multiple organisations, Docker, CI, packaging as a pip package, licence checks. Add them later if you want. They are not needed to learn the four things above.
