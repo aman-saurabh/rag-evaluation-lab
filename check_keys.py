@@ -10,8 +10,8 @@ print("Groq:", Groq().chat.completions.create(
     max_tokens=300,
 ).choices[0].message.content)
 
-r = httpx.post(EMBED_URL, headers={"Authorization": f"Bearer {os.environ['HF_TOKEN']}"},
-               json={"inputs": ["hello"]}, timeout=60)
-print("HuggingFace:", r.status_code, len(r.json()[0]))
+embed_response = httpx.post(EMBED_URL, headers={"Authorization": f"Bearer {os.environ['HF_TOKEN']}"},
+                            json={"inputs": ["hello"]}, timeout=60)
+print("HuggingFace:", embed_response.status_code, len(embed_response.json()[0]))
 
-print("LangSmith:", [p.name for p in Client().list_projects(limit=3)])
+print("LangSmith:", [project.name for project in Client().list_projects(limit=3)])

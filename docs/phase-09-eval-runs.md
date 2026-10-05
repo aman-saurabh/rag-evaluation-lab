@@ -16,7 +16,7 @@ A run takes minutes (24 questions, each with an answer and several judge calls, 
 3. After each example, update `job["done"]` so the page can show progress. `evaluate()` in `langsmith` 0.14.4 has no progress callback, so count progress yourself: increase `job["done"]` at the end of your `target` function (and of each evaluator, if you want finer progress).
 4. When finished, read the experiment's average score per evaluator and store it in `job["scores"]` with the experiment URL.
 
-**Pace the calls.** Before each judge call, check how many tokens you used in the last minute and sleep if you are near 6,000. A simple version: sleep 3 seconds between LLM calls. Retry on a 429 (you already have this in `llm.py`).
+**Pace the calls.** Before each judge call, check how many tokens you used in the last minute and sleep if you are near 6,000. A simple version: sleep 3 seconds between LLM calls. Retry on a 429 (`max_retries` on the `ChatGroq` models in `llm.py` already does this).
 
 ## Step 2. The job store
 

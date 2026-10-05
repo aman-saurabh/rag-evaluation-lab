@@ -21,9 +21,9 @@ import httpx
 BASE = "http://localhost:8000"
 
 def ask(question, mode):
-    r = httpx.post(f"{BASE}/ask", json={"question": question, "mode": mode}, timeout=120)
-    r.raise_for_status()
-    return r.json()
+    response = httpx.post(f"{BASE}/ask", json={"question": question, "mode": mode}, timeout=120)
+    response.raise_for_status()
+    return response.json()
 
 def compare(question): ...
 def list_documents(): ...

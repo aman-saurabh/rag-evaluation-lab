@@ -12,7 +12,8 @@ SETTINGS_FILE = DATA / "settings.json"
 DATASET_DIR = DATA / "datasets"
 
 COLLECTION = "chunks"
-EMBED_URL = "https://router.huggingface.co/hf-inference/models/BAAI/bge-small-en-v1.5/pipeline/feature-extraction"
+EMBED_MODEL = "BAAI/bge-small-en-v1.5"
+EMBED_URL ="https://router.huggingface.co/hf-inference/models/BAAI/bge-small-en-v1.5/pipeline/feature-extraction"
 EMBED_DIM = 384
 FAST_MODEL = "openai/gpt-oss-20b"
 STRONG_MODEL = "openai/gpt-oss-120b"

@@ -23,11 +23,13 @@ The user spent many days on an earlier, much larger project (`C:\Users\asaur\Pro
 2. **No abstractions until they are needed twice.** No base classes, plugin systems, registries, factories, dependency injection, or generic "manager" classes. Plain functions and dictionaries are fine.
 3. **One file per job, as listed in `docs/00-start-here.md`.** Do not split a file into a package. Aim for each file to stay readable in one sitting (roughly under 200 lines). If a file grows past that, say so rather than silently restructuring.
 4. **Only the libraries in `docs/00-start-here.md`.** Ask before adding any other library.
-5. **One phase at a time.** Do the steps of the current phase, run them, show the result, and check the "you are done when" list. Do not start the next phase or build ahead.
-6. **Testing means running the live app.** Build the real code, start the servers, try it in the browser, and fix what breaks. Do not write unit tests, check scripts, CI, linters, pre-commit hooks, type-checking setup, Docker or packaging. Unit tests exist only in phase 11, which is optional practice at the very end, when the whole app is built and working, and only if the user asks for it.
+4b. **Use LangChain components instead of hand-written code** wherever one exists (loaders, splitters, embeddings, vector stores, retrievers, `ChatGroq`, prompt templates, structured output). Plain Python only where it is the lesson (the crude guards) or no component exists. This is not "adding abstractions"; it is the opposite.
+5. **One phase at a time.** Do the steps of the current phase, tell the user what to run, and go through the "you are done when" list with them once they share the result. Do not start the next phase or build ahead.
+6. **Testing means running the live app, and the user runs it.** Build the real code, then tell the user which command to run (servers, scripts, the browser) and wait for the result. Fix what breaks. Do not write unit tests, check scripts, CI, linters, pre-commit hooks, type-checking setup, Docker or packaging. Unit tests exist only in phase 11, which is optional practice at the very end, when the whole app is built and working, and only if the user asks for it.
 7. **No new planning documents.** The docs already exist. If something in them is wrong or too complicated, say so and propose a simpler change, then edit the doc.
 8. **Prefer deleting to adding.** If a step in the docs looks unnecessary, point it out and offer to skip it.
 9. Keep guards and evaluators crude on purpose (phrase lists, regex, one-question LLM judges). The point is to learn what they catch and miss.
+9b. **Write simple code a beginner can read line by line.** Use plain `for` loops and `if` statements, one step per line, and meaningful names. No clever one-liners: no long comprehensions, no nested conditional expressions, no `lambda`, no dense slicing or chained calls. If a line needs explaining, split it into several lines or add a short comment. Readable beats short.
 10. Explain things in plain language. The user is learning. When you write code, say in a sentence or two what it does and why.
 
 ## How to work with the user
@@ -37,7 +39,8 @@ The user spent many days on an earlier, much larger project (`C:\Users\asaur\Pro
 - Commit only when the user asks. Never put a secret in any file except `.env` (which is gitignored).
 - The user does not want to use Claude Code or MCP *inside* the app. There is no MCP server in this project.
 - If something fails, show the real error, explain it simply, and fix the smallest thing. Do not rewrite working code.
-- Do not write separate check or test scripts for library calls. Write the real code, run it, and fix errors when they appear.
+- **Never run anything without the user's permission** (no `uv run`, scripts, servers, `uv add`, ingest, or any other command; each call also uses the free Groq, HuggingFace and LangSmith quotas). Edit files, then tell the user the exact command to run. Run it yourself only when the user asks you to.
+- Do not write separate check or test scripts for library calls. Write the real code, ask the user to run it, and fix errors when they share them.
 
 ## Already prepared (do not redo)
 

@@ -58,15 +58,14 @@ Add one test per attack from `attacks_prompt.yaml` that you know the guards bloc
 Use a tiny fake corpus (5 chunks written in the test) rather than your real index.
 
 - BM25 returns the chunk containing an exact rare word at rank 1.
-- RRF: a chunk ranked 1st in both lists beats a chunk ranked 1st in only one.
-- RRF handles a chunk that is in only one list.
+- Hybrid (`EnsembleRetriever`): a chunk ranked 1st in both lists beats a chunk ranked 1st in only one, and a chunk in only one list still appears.
 - `search` raises a clear error for an unknown mode.
 
-Test the RRF function and the BM25 helper directly. For dense search, replace `embed` with a fake that returns fixed vectors.
+Build a `BM25Retriever` and an `EnsembleRetriever` on the fake corpus. For dense search, use LangChain's `DeterministicFakeEmbedding` as the `embeddings`, with an in-memory `QdrantVectorStore`.
 
 ### `tests/test_graph.py`
 
-Replace `search` and `chat` with fakes (use `monkeypatch`).
+Replace `search` and the answer chain's LLM with fakes (use `monkeypatch`; LangChain's `GenericFakeChatModel` works as a fake LLM).
 
 - Passages found, the fake LLM returns "Answer [1]" -> the answer has a source with the right file and page.
 - No relevant passages -> `abstained` is true and the LLM fake was **not called**.

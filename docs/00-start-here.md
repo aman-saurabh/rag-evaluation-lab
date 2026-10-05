@@ -79,6 +79,9 @@ rag-evaluation-lab/
   .env                       your keys (never share or commit)
   .env.example               the same without the keys
   pyproject.toml             the list of libraries
+  check_keys.py              checks the three keys work (phase 0, kept)
+  try_search.py              prints what dense, sparse and hybrid find (phase 1, kept)
+  try_ask.py                 asks questions in all three modes (phase 2, kept)
   data/
     pdfs/                    the documents (five NIST PDFs to start with)
     chunks.jsonl             the chunks (written by ingest)
@@ -88,9 +91,9 @@ rag-evaluation-lab/
   app/
     config.py                reads .env, holds constants
     ingest.py                PDF -> chunks -> embeddings
-    embeddings.py            calls the HuggingFace API
-    retrieve.py              dense, sparse, hybrid
-    llm.py                   calls Groq
+    embeddings.py            the HuggingFace embeddings object (used by ingest and retrieve)
+    retrieve.py              dense, sparse, hybrid (LangChain retrievers)
+    llm.py                   the two ChatGroq models (fast and strong)
     guards.py                all the guards
     graph.py                 the LangGraph flow
     evaluators.py            all the evaluators
@@ -119,10 +122,12 @@ You will create these files phase by phase. Do not create them all upfront.
 | `httpx` | The page calls the backend; the backend calls HuggingFace |
 | `langgraph` | The graph |
 | `langsmith` | Traces, datasets, evaluators, feedback |
-| `groq` | The AI model |
-| `rank-bm25` | Sparse search |
-| `qdrant-client` | Dense search store |
-| `pypdf` | Read text from PDFs |
+| `langchain-groq` | `ChatGroq`, the AI model (installs `groq` itself; added in phase 2) |
+| `rank-bm25` | Sparse search (used underneath by LangChain's `BM25Retriever`) |
+| `qdrant-client`, `langchain-qdrant` | Dense search store (`QdrantVectorStore`) |
+| `pypdf` | Read text from PDFs (used underneath by LangChain's `PyPDFLoader`) |
+| `langchain-huggingface` | `HuggingFaceEndpointEmbeddings` (embeddings through the HuggingFace API) |
+| `langchain-community`, `langchain-text-splitters` | `PyPDFLoader` (load PDF pages) and `RecursiveCharacterTextSplitter` (cut into chunks) |
 | `pyyaml` | Read and write the dataset files |
 | `python-dotenv` | Read `.env` |
 | `pytest` | Tests (phase 11) |
@@ -134,6 +139,8 @@ You will create these files phase by phase. Do not create them all upfront.
 - **HuggingFace:** the free credit is small. Embed each document once (we save the results) and do not re-embed on every run.
 
 ## Rules we follow
+
+0. **Use LangChain components instead of hand-written code** (loaders, splitters, embeddings, vector stores, retrievers, chat models, prompts, output parsers). The only plain Python is where it is the lesson (the crude guards in phase 6) or where no component exists.
 
 1. Small steps. Every phase ends with something you can run.
 2. Change one thing, run it, then move on.
