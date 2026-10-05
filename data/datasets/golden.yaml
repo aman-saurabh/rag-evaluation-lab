@@ -1,0 +1,143 @@
+# Golden questions. Page numbers are 1-based PDF page numbers (the page index in the PDF file, not the printed label).
+# Copied from the old project and checked there on 2026-10-05. Re-check any you change.
+# type: answerable | unanswerable (answer: null) | multi_document
+
+- id: A01
+  type: answerable
+  question: What are the four functions of the NIST AI Risk Management Framework core?
+  answer: GOVERN, MAP, MEASURE and MANAGE.
+  sources:
+  - file: nist-ai-rmf-1.0.pdf
+    page: 8
+- id: A02
+  type: answerable
+  question: Which characteristics of trustworthy AI systems does AI RMF 1.0 list?
+  answer: Valid and reliable, safe, secure and resilient, accountable and transparent, explainable and
+    interpretable, privacy enhanced, and fair with harmful biases managed.
+  sources:
+  - file: nist-ai-rmf-1.0.pdf
+    page: 7
+  - file: nist-ai-rmf-1.0.pdf
+    page: 8
+- id: A03
+  type: answerable
+  question: In which month and year was AI RMF 1.0 published?
+  answer: January 2023.
+  sources:
+  - file: nist-ai-rmf-1.0.pdf
+    page: 2
+- id: A05
+  type: answerable
+  question: What are the six functions of NIST CSF 2.0?
+  answer: GOVERN, IDENTIFY, PROTECT, DETECT, RESPOND and RECOVER.
+  sources:
+  - file: nist-csf-2.0.pdf
+    page: 8
+  - file: nist-csf-2.0.pdf
+    page: 9
+- id: A06
+  type: answerable
+  question: On what date was CSF 2.0 released?
+  answer: February 26, 2024.
+  sources:
+  - file: nist-csf-2.0.pdf
+    page: 1
+- id: A07
+  type: answerable
+  question: What are the four groups of practices in the Secure Software Development Framework (SSDF)
+    version 1.1?
+  answer: Prepare the Organization (PO), Protect the Software (PS), Produce Well-Secured Software (PW)
+    and Respond to Vulnerabilities (RV).
+  sources:
+  - file: nist-sp-800-218-ssdf.pdf
+    page: 13
+- id: A08
+  type: answerable
+  question: What is the control objective of identity assurance level IAL1 in NIST SP 800-63-4?
+  answer: To limit highly scalable attacks, protect against synthetic identity, and protect against attacks
+    that use compromised personal information.
+  sources:
+  - file: nist-sp-800-63-4.pdf
+    page: 45
+- id: A09
+  type: answerable
+  question: What does authenticator assurance level AAL2 provide?
+  answer: High confidence that the claimant controls one or more authenticators bound to the subscriber
+    account.
+  sources:
+  - file: nist-sp-800-63-4.pdf
+    page: 46
+- id: A10
+  type: answerable
+  question: How does the Generative AI Profile define confabulation?
+  answer: The production of confidently stated but erroneous or false content.
+  sources:
+  - file: nist-ai-600-1-genai-profile.pdf
+    page: 8
+- id: U01
+  type: unanswerable
+  question: What was Acme's AI budget for Q4?
+  answer: null
+  notes: The budget sheet only has Q1 to Q3.
+- id: U02
+  type: unanswerable
+  question: What fine does the EU AI Act set for the most serious violations?
+  answer: null
+  notes: No EU AI Act document in the corpus.
+- id: U03
+  type: unanswerable
+  question: Who is the chief executive of Acme Corp?
+  answer: null
+- id: U04
+  type: unanswerable
+  question: What is Acme's remote work policy?
+  answer: null
+  notes: The Acme document covers AI tool usage only.
+- id: U05
+  type: unanswerable
+  question: Which GPU model does NIST recommend for training large language models?
+  answer: null
+- id: U06
+  type: unanswerable
+  question: What risk score did the steering committee give the vendor outage risk?
+  answer: null
+  notes: The register gives likelihood and impact but no numeric score.
+- id: M01
+  type: multi_document
+  question: How many more functions does CSF 2.0 have than the AI RMF core?
+  answer: Two (six versus four).
+  sources:
+  - file: nist-csf-2.0.pdf
+    page: 8
+  - file: nist-csf-2.0.pdf
+    page: 9
+  - file: nist-ai-rmf-1.0.pdf
+    page: 8
+- id: M02
+  type: multi_document
+  question: Which function name appears in both the AI RMF core and CSF 2.0?
+  answer: GOVERN.
+  sources:
+  - file: nist-ai-rmf-1.0.pdf
+    page: 8
+  - file: nist-csf-2.0.pdf
+    page: 8
+- id: M03
+  type: multi_document
+  question: Which was published first, AI RMF 1.0 or the Generative AI Profile, and in which months?
+  answer: AI RMF 1.0 (January 2023) came before the Generative AI Profile (July 2024).
+  sources:
+  - file: nist-ai-rmf-1.0.pdf
+    page: 2
+  - file: nist-ai-600-1-genai-profile.pdf
+    page: 2
+- id: M06
+  type: multi_document
+  question: Which framework has four practice groups and which framework has four core functions?
+  answer: The SSDF has four practice groups (PO, PS, PW, RV). The AI RMF has four core functions (GOVERN,
+    MAP, MEASURE, MANAGE).
+  sources:
+  - file: nist-sp-800-218-ssdf.pdf
+    page: 13
+  - file: nist-ai-rmf-1.0.pdf
+    page: 8
