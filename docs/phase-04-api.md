@@ -15,6 +15,7 @@ from pydantic import BaseModel
 class AskRequest(BaseModel):
     question: str
     mode: str = "hybrid"        # "dense", "sparse" or "hybrid"
+    session_id: str | None = None   # same id = same conversation (memory); no id = a fresh chat
 
 class Source(BaseModel):
     file: str
@@ -27,11 +28,10 @@ class AskResponse(BaseModel):
     abstained: bool
     run_id: str
     trace_url: str | None = None
-    guard_results: list[dict] = []   # filled in phase 6
     mode: str
 ```
 
-Add `CompareRequest` (question only) and a `DocumentInfo` (file, chunks) when you need them.
+Step 2 of the build order adds `CompareRequest` (question only) and `CompareResponse` (one `AskResponse` for each of `dense`, `sparse`, `hybrid`). Step 3 adds `DocumentInfo` (file, chunks) and `UploadResponse` (the same plus a `message`). Phase 6 adds `guard_results` to `AskResponse`; do not add it now.
 
 ## Step 2. Start the app (`api/main.py`)
 
@@ -47,16 +47,26 @@ app.include_router(routes_documents.router)
 def health(): ...
 ```
 
-A **router** is a group of endpoints kept in its own file. Each later phase adds one router file and one `include_router` line.
+A **router** is a group of endpoints kept in its own file. Each later step adds one router file and one `include_router` line (for example `routes_documents` when you build the document endpoints in step 3).
 
 ## Step 3. The endpoints
 
-**`POST /ask`** (`routes_ask.py`): takes `AskRequest`, calls `ask()`, returns `AskResponse`. Reject a `mode` that is not one of the three with a clear error (`HTTPException(400, ...)`).
+Each file holds the endpoints of one job.
 
-**`POST /compare`**: takes a question and runs all three modes. Returns a dict with `dense`, `sparse` and `hybrid` results. Run them one after the other (Groq has token limits).
+### `api/main.py`
 
-**`POST /documents`** (`routes_documents.py`): takes an uploaded PDF (`file: UploadFile`).
-1. Reject a name that does not end in `.pdf`, or a file larger than 20 MB.
+**`GET /health`**: try one cheap call to each of Groq, HuggingFace, Qdrant and LangSmith. Return `{"groq": true, "huggingface": true, ...}`. Never return an error message that could include a key. Use a call that costs nothing for Groq (`Groq().models.list()` lists models, it uses no tokens), because the web page may call `/health` often and the free token limit is small.
+
+### `api/routes_ask.py`
+
+**`POST /ask`**: takes `AskRequest`, calls `ask(question, mode, session_id=..., tags=["source:ui"])`, returns `AskResponse`. Reject a `mode` that is not one of the three with a clear error (`HTTPException(400, ...)`). The `session_id` is what gives the chat its memory: the web page sends the same id for the whole conversation.
+
+**`POST /compare`**: takes a question and runs all three modes. Returns `dense`, `sparse` and `hybrid` results (`CompareResponse`). Run them one after the other (Groq has token limits). It simply calls the `/ask` function once per mode, with no session, so each mode starts a fresh chat. One call uses up to 3 answers' worth of Groq tokens.
+
+### `api/routes_documents.py`
+
+**`POST /documents`**: takes an uploaded PDF (`file: UploadFile`).
+1. Reject a name that does not end in `.pdf`, or a file that does not start with `%PDF`. (The 20 MB size limit is checked in the web page in phase 5, before the file is sent. The API does not check the size.)
 2. Save to `data/pdfs/` under a safe name (`Path(name).name`, never trust the path).
 3. Re-run ingest. For the first version, re-index everything. Say so in the reply.
 4. Return the file name and number of chunks.
@@ -65,13 +75,29 @@ A **router** is a group of endpoints kept in its own file. Each later phase adds
 
 **`DELETE /documents/{name}`**: delete the PDF, then re-index.
 
-**`GET /health`**: try a tiny call to each of Groq, HuggingFace, Qdrant (count the collection) and LangSmith. Return `{"groq": true, "huggingface": true, ...}`. Never return an error message that could include a key.
+**Refreshing the search after an upload or delete.** The in-memory BM25 index and the Qdrant handle must be rebuilt. This is done by `reload_index()` in `app/retrieve.py`:
+1. It closes the Qdrant client first, because on Windows the Qdrant folder cannot be deleted while it is open.
+2. It runs ingest (`ingest_all()`), which rebuilds `chunks.jsonl` and the Qdrant folder.
+3. It runs `load_index()`, which creates the search objects again (`store`, `bm25`, `hybrid`).
 
-After an upload or delete, the in-memory BM25 index and the Qdrant handle must be refreshed. Add a `reload_index()` function in `retrieve.py` and call it after ingest.
+Other files must not keep their own copy of those objects, because the copy would be old after a reload. So instead of `from app.retrieve import bm25`, they write `from app import retrieve as retrieval` and use `retrieval.bm25` or `retrieval.store` each time. That always gives the current object. (`graph.py` uses it for the sparse check, `main.py` for `/health`.)
 
-Ingest takes minutes for big files. For the first version just let the request wait. (The UI will show a spinner.)
+Other rules in `routes_documents.py`:
+- The file must start with `%PDF`, so a renamed text file is rejected.
+- If indexing fails, the new PDF is deleted and the reply says to run `uv run python -m app.ingest` and restart the server (the old index may be half-deleted).
+- The last remaining document cannot be deleted, because there would be nothing to index.
+
+Ingest re-embeds every document, so it takes minutes and uses HuggingFace credit each time. For the first version just let the request wait. (The UI will show a spinner.)
+
+## Build order
+
+1. `schemas.py`, `main.py` with `/health`, and `routes_ask.py` with `/ask` (including the trace URL from step 6). Test them on the `/docs` page.
+2. `/compare`.
+3. `routes_documents.py` and `reload_index()` (the hardest part, so it comes last).
 
 ## Step 4. Run it
+
+Only one program can open the Qdrant folder at a time. **Stop the server before running `try_search.py`, `try_ask.py` or ingest**, and stop those before starting the server.
 
 ```powershell
 uv run uvicorn api.main:app --reload
@@ -107,5 +133,9 @@ The trace is sent in the background, so `read_run` may fail for a moment right a
 
 - [ ] `uvicorn` starts and `/docs` opens.
 - [ ] `POST /ask` returns an answer, sources and a `run_id`, in all three modes.
-- [ ] `POST /documents` accepts a PDF and `GET /documents` lists it.
+- [ ] `POST /compare` returns three answers (dense, sparse, hybrid).
+- [ ] `POST /ask` with the same `session_id` twice remembers the first question (try "What is the GOVERN function?" then "What is its purpose?").
+- [ ] `GET /documents` lists the five NIST PDFs with chunk counts.
+- [ ] `POST /documents` accepts a small PDF and `GET /documents` lists it. Then `DELETE /documents/{name}` removes it. (Each of these re-indexes everything, so it takes minutes and uses HuggingFace credit; do it once.)
+- [ ] After the upload and delete, `POST /ask` still works (the search was refreshed).
 - [ ] `GET /health` shows all four services true.

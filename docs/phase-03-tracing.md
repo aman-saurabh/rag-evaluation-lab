@@ -34,47 +34,52 @@ from langsmith import traceable
 def check_prompt_injection(text): ...
 ```
 
-## Step 3. Add tags and metadata
+## Step 3. Add tags
 
-Tags and metadata let you filter traces later. With LangGraph you pass them in the `config` of the call:
+Tags let you filter traces later. (LangSmith also has "metadata", key and value pairs for the same purpose. We use tags only, so the mode is not stored twice.) With LangGraph you pass tags in the `config` of the call. **It is one config dictionary**: it already holds the `thread_id` for memory (phase 2), so tracing adds to it and does not replace it:
 
 ```python
-app_graph.invoke(
-    {"question": question, "mode": mode},
-    config={"tags": [f"mode:{mode}"], "metadata": {"mode": mode}},
-)
+config = {
+    "configurable": {"thread_id": session_id or f"no-session-{run_id}"},  # memory (phase 2): new chat if no session
+    "run_id": run_id,                                                       # tracing (step 4)
+    "tags": [f"mode:{mode}"],
+}
+app_graph.invoke({"question": question, "mode": mode}, config)
 ```
 
-Give `ask()` an optional `tags` argument (default: none) so callers can add their own, for example `source:ui` from the API and `source:eval` from the evaluation runner (phase 9). Merge them with the `mode:` tag before the call. Later phases add `guard:blocked` and `abstained`.
+Give `ask()` an optional `tags` argument (default: none) so callers can add their own, for example `source:ui` from the API and `source:eval` from the evaluation runner (phase 9). If the caller passed no tags (`tags is None`), use an empty list, then build the full list as `[f"mode:{mode}"] + tags`. Later phases add `guard:blocked` and `abstained`.
 
 ## Step 4. Return the trace id
 
 The UI will need a link to the trace and, in phase 7, an id to attach feedback to.
 
 - Create a UUID before the call: `run_id = uuid.uuid4()`.
-- Pass it in the same config: `config={"run_id": run_id, "tags": [...], "metadata": {...}}`.
-- Return it from `ask()` as `run_id`.
+- Pass it in the same config (see step 3).
+- Return it from `ask()` as `run_id` (as text: `str(run_id)`).
 
-Traces are sent in the background. If your script ends instantly, call `from langsmith import Client; Client().flush()` or wait a second before exiting, so the last trace is not lost.
+Traces are sent in the background. If your script ends instantly, the last trace can be lost. In `try_ask.py`, add `print("    trace id:", result["run_id"])` to `show`, and at the end call `wait_for_all_tracers()` (`from langchain_core.tracers.langchain import wait_for_all_tracers`) so it waits until everything is sent. (The FastAPI server keeps running, so it does not need this.)
 
 ## Step 5. Look at the results
 
 Open smith.langchain.com, the project `rag-evaluation-lab`, and run a few questions in each mode from `try_ask.py`.
 
 Explore:
-1. Click a trace. Open the `retrieve` step. Do you see the passages?
+1. Click a trace. Open the `retrieve` step. Do you see the retrieved documents?
 2. Open the `ChatGroq` step (the LLM call inside `generate`). Do you see the exact prompt? How many tokens?
-3. Filter by tag `mode:dense`. Compare average latency with `mode:sparse`.
-4. Open the **Monitor** tab of the project. You should see request counts, latency and token charts.
-5. Find an answer that was wrong. Use the trace to see whether the search or the LLM was at fault. This is the main reason traces exist.
+3. Compare a first question with a follow-up from the "memory ON" part of `try_ask.py`. The follow-up has an extra `ChatGroq` step inside `condense` (the question rewrite). Its input shows the conversation, and its output is the standalone question the search used.
+4. Filter by tag `mode:dense`. Compare average latency with `mode:sparse`.
+5. Open the **Monitor** tab of the project. You should see request counts, latency and token charts.
+6. Open the **Threads** view of the project. Because `ask()` passes a `thread_id`, the three "memory ON" questions are grouped as one conversation.
+7. Find an answer that was wrong. Use the trace to see whether the search or the LLM was at fault. This is the main reason traces exist.
 
 ## Step 6. Keep your data private
 
-Traces include the full passages and prompts. This is fine for public NIST documents. If you later use private documents, do not trace them to a shared LangSmith workspace.
+Traces include the full retrieved documents and prompts. This is fine for public NIST documents. If you later use private documents, do not trace them to a shared LangSmith workspace.
 
 ## You are done when
 
 - [ ] A question in each mode produces a trace with `retrieve` and `generate` steps, and a `ChatGroq` step inside `generate`.
 - [ ] You can filter traces by `mode:dense`, `mode:sparse` and `mode:hybrid`.
 - [ ] The Monitor tab shows your requests.
-- [ ] `ask()` returns a `run_id`.
+- [ ] `ask()` returns a `run_id`, and `try_ask.py` prints a `trace id` that you can find in LangSmith.
+- [ ] Memory still works after adding tracing (the "memory ON" follow-up still searches for GOVERN), because the `thread_id` is still in the config.

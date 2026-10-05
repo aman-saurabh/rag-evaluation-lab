@@ -1,3 +1,4 @@
+from langchain_core.tracers.langchain import wait_for_all_tracers
 from app.graph import ask
 from app.retrieve import store
 
@@ -19,6 +20,7 @@ for question in ["What is the GOVERN function in the NIST AI RMF?",
     print(question)
     print("  searched for:", result["search_query"])
     print("  relevant text found:", result["relevant"])
+    print("  trace id:", result["run_id"])
     print("  hybrid", "|", result["answer"][:200], "|", sources)
 
 # Control: the same follow-up without a session. With no memory it cannot know what "its" means.
@@ -27,6 +29,9 @@ result = ask("What is its purpose?", "hybrid")
 print("  searched for:", result["search_query"])
 print("  relevant text found:", result["relevant"])
 print("  hybrid", "|", result["answer"][:200])
+
+# Traces are sent to LangSmith in the background. Wait here so the last ones are not lost when the script ends.
+wait_for_all_tracers()
 
 # Release the Qdrant folder so Windows does not print an error when the script exits.
 store.client.close()

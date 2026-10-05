@@ -55,7 +55,7 @@ Dense and BM25 scores are on different scales, so keep this rule simple:
 
 - For `dense`: if the best score (cosine similarity) is below a threshold (start with 0.55), treat it as nothing relevant.
 - For `sparse`: if the best BM25 score (`retriever.vectorizer.get_scores(...)`, see phase 1) is 0 (no query word appears anywhere), treat it as nothing relevant.
-- For `hybrid`: use the dense rule on the dense result.
+- For `hybrid`: its results come from rank merging and have no score, so we cannot judge them. We only check that something was found (`len(retrieved_docs) > 0`), which is almost always true. So in hybrid mode the model itself decides to say "I don't know". This is a known weakness of hybrid mode in this app; note it in phase 10.
 
 Put the threshold as a constant (`DENSE_MIN_SCORE = 0.55`) at the top of `app/graph.py`, because only the graph uses it (phase 6 moves it into the settings file). You will tune it in phase 10 using the unanswerable questions. Do not worry about getting them perfect now.
 
@@ -101,42 +101,49 @@ The chat remembers earlier turns so follow-ups like "What is its purpose?" work.
 
 ## Step 5. Try it
 
-Create `try_ask.py` at the project root. **Keep it**; you will re-run it after every change to the graph, the prompt or the thresholds:
+Create `try_ask.py` at the project root. **Keep it**; re-run it after a change to the graph, the prompt or the threshold. Do not run it more than needed: one run makes about 7 LLM calls (the Acme question abstains before calling the LLM), and the free Groq tier allows only about 200,000 tokens per day for the fast model.
 
 ```python
 from app.graph import ask
 from app.retrieve import store
 
+
+def show(mode, result):
+    sources = [(source["file"], source["page"]) for source in result["sources"]]
+    print(f"  {mode} | {result['answer'][:200]} | {sources}")
+    print("    searched for:", result["search_query"])
+    print("    relevant text found:", result["relevant"])
+    print("    abstained:", result["abstained"])
+
+
+# 1. All three search modes. The first question has an answer; the second does not (it should abstain).
 for question in ["What are the four functions of the NIST AI RMF?",
                  "What was Acme's budget for Q4?"]:
+    print("\n" + question)
     for mode in ["dense", "sparse", "hybrid"]:
         result = ask(question, mode)
-        sources = [(source["file"], source["page"]) for source in result["sources"]]
-        print(question)
-        print(mode, "|", result["answer"][:200], "|", sources)
+        show(mode, result)
+print("\nask() returns these keys:", sorted(result))
 
-# Memory: the second question only makes sense with the first ("its" means the GOVERN function).
+# 2. Memory ON: "its" in the second question only makes sense with the first.
 print("\n-- follow-up in one session (memory ON) --")
 for question in ["What is the GOVERN function in the NIST AI RMF?",
-                 "What is its purpose?",
-                 "And how does the MAP function differ from it?"]:
+                 "What is its purpose?"]:
+    print("\n" + question)
     result = ask(question, "hybrid", session_id="demo")
-    sources = [(source["file"], source["page"]) for source in result["sources"]]
-    print(question)
-    print("  searched for:", result["search_query"])
-    print("  relevant text found:", result["relevant"])
-    print("  hybrid", "|", result["answer"][:200], "|", sources)
+    show("hybrid", result)
 
-# Control: the same follow-up without a session. With no memory it cannot know what "its" means.
+# 3. Memory OFF (control): the same follow-up without a session cannot know what "its" means.
 print("\n-- same follow-up, no session (memory OFF) --")
+print("\nWhat is its purpose?")
 result = ask("What is its purpose?", "hybrid")
-print("  searched for:", result["search_query"])
-print("  relevant text found:", result["relevant"])
-print("  hybrid", "|", result["answer"][:200])
+show("hybrid", result)
 
 # Release the Qdrant folder so Windows does not print an error when the script exits.
 store.client.close()
 ```
+
+(Phase 3 adds one more line to `show` that prints the trace id, and a `wait_for_all_tracers()` call before the last line.)
 
 Run it from the project root (stop the API first if it is running):
 
@@ -144,7 +151,7 @@ Run it from the project root (stop the API first if it is running):
 uv run python try_ask.py
 ```
 
-It prints 6 lines (2 questions x 3 modes), then the follow-up section. For each follow-up it prints the question, what the app actually searched for (`searched for`), whether relevant text was found, and the answer.
+For each question and mode it prints the answer with its sources `(file, page)`, then what the app actually searched for (`searched for`), whether relevant text was found, and whether it abstained. That is 6 answer blocks (2 questions x 3 modes), then the list of keys `ask()` returns, then the memory ON part (2 questions) and the memory OFF part (1 question).
 
 The first question should be answered with a correct source. The second has no answer in the documents, so it should abstain in at least some modes. If it makes something up, that is a hallucination. Note which mode did it. This is exactly what the evaluators will catch.
 
@@ -158,9 +165,9 @@ The first question should be answered with a correct source. The second has no a
 
 Run `uv run python try_ask.py` from the project root.
 
-- [ ] The script runs without an error and prints 6 lines.
+- [ ] The script runs without an error and prints 6 answer blocks (2 questions x 3 modes), then the memory parts.
 - [ ] The AI RMF question returns a non-empty answer with a citation like `[1]` in all three modes, and the printed sources include `nist-ai-rmf-1.0.pdf` page 8 (or a page next to it).
 - [ ] The Acme question returns "I don't know" in at least one mode, and you know why the others did not (look at the threshold rule in step 3).
 - [ ] Memory works: in the "memory ON" part, `searched for` for "What is its purpose?" mentions GOVERN (the app rewrote the question using the first one). In the "memory OFF" part, `searched for` is just "What is its purpose?" and the answer is "I don't know" or off-topic.
-- [ ] `ask()` returns the keys `answer`, `sources`, `abstained`, `retrieved_docs`, `relevant` and `search_query`.
+- [ ] The line "ask() returns these keys" lists `abstained`, `answer`, `relevant`, `retrieved_docs`, `search_query` and `sources`.
 - [ ] Each source's page matches the passage the answer actually used: open the PDF at that page and check one answer by eye.

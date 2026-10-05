@@ -61,7 +61,9 @@ All three searches are ready-made LangChain objects. Build them once at module l
 
 Finally add one entry point: `search(query, mode, k=5)` where `mode` is `"dense"`, `"sparse"` or `"hybrid"`. It converts the Documents to dicts `{id, file, page, text, score, rank}` (`score` is only filled for dense) so the rest of the app does not care which search ran.
 
-Qdrant's local mode lets only one program open the folder at a time. Create the store once at module level and reuse it. Do not run the ingest script while the API is running.
+Qdrant's local mode lets only one program open the folder at a time. Create the store once and reuse it. Do not run the ingest script while the API is running.
+
+(Phase 4 moves the three build steps above into one function, `load_index()`, so the app can rebuild them after a PDF is uploaded or deleted. The searches work the same way. `try_search.py` is not affected.)
 
 ## Step 5. Try it
 

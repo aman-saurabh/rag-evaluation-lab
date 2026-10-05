@@ -56,7 +56,7 @@ Layout:
 
 ## Step 4. Documents page (`ui/pages/2_Documents.py`)
 
-- **Upload:** `st.file_uploader("PDF", type="pdf")` then a button "Add to index". Show a spinner and then the chunk count.
+- **Upload:** `st.file_uploader("PDF", type="pdf")` then a button "Add to index". Before sending, check `uploaded_file.size`: if it is larger than 20 MB (`20 * 1024 * 1024` bytes), show an error and do not call the API (the API does not check the size). Show a spinner and then the chunk count.
 - **List:** a table of file name and chunk count from `list_documents()`.
 - **Delete:** a button per row. Ask for confirmation first (a checkbox "I am sure").
 - Say in the page text that re-indexing re-embeds everything and uses HuggingFace credit.
