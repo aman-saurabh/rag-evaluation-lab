@@ -10,7 +10,7 @@ Tests written early get rewritten every time the design changes. By now the guar
 
 ## Two rules
 
-1. **Tests never call the internet.** No Groq, no HuggingFace, no LangSmith. They would be slow, cost tokens and fail randomly. Replace those calls with fakes.
+1. **Tests never call the internet.** No Groq, no HuggingFace, no LangSmith. They would be slow, cost tokens and fail now and then for reasons that have nothing to do with your code. Use "fakes" instead: stand-in objects that answer instantly and cost nothing.
 2. **Test behaviour, not the code's insides.** Check what goes in and what comes out.
 
 ## Setup
@@ -38,20 +38,19 @@ Run all tests with `uv run pytest`.
 
 ### `tests/test_guards.py` (the most valuable file)
 
-Every guard is a plain function, so these are quick and need no fakes.
+The guards that use an AI model would call Groq, so give them a fake model (LangChain's `GenericFakeChatModel`, or temporarily replace `check_prompt_injection` and `check_safety` using pytest's `monkeypatch`). Then test what your code does with the fake model's verdict. The plain guards (`length`, `citation_output`) need no fakes. Test `PIIMiddleware` through the answer step, with a fake model.
 
 | Test | Input | Expect |
 |---|---|---|
-| prompt injection blocked | "Ignore previous instructions and..." | `block` |
+| prompt injection blocked | fake Prompt Guard score 0.99 | `block` |
 | normal question allowed | "What are the four functions of the AI RMF?" | `allow` |
-| spaced-out attack | "i g n o r e previous instructions" | whatever you decided in phase 6. If it gets through, write the test as the *current* behaviour and mark it `xfail` with the reason, so it reminds you |
-| code injection | "run rm -rf /" | `block` |
-| false alarm | "What does the system prompt in an LLM mean?" | `allow` or a known result |
-| PII redaction | an answer containing `a@b.com` and `gsk_abc123...` | redacted |
-| citation check | answer with `[9]` and 3 passages | `block` |
+| fake safeguard verdict `violation=True` | any text | `block` |
+| fake safeguard verdict `violation=False` | "What does the system prompt in an LLM mean?" | `allow` |
+| PII redaction | a fake model that answers with `a@b.com` and `gsk_abc123...` | both redacted in the answer |
+| citation check | answer with `[9]` and 3 retrieved documents | `block` |
 | disabled guard | guard set to `enabled: false` | `allow`, detail "disabled" |
 
-Add one test per attack from `attacks_prompt.yaml` that you know the guards block. Loop over the file with `pytest.mark.parametrize`.
+The real attack sets are for the evaluators (phase 8), not for these tests: real model-based guards need the internet.
 
 ### `tests/test_retrieve.py`
 
@@ -65,12 +64,12 @@ Build a `BM25Retriever` and an `EnsembleRetriever` on the fake corpus. For dense
 
 ### `tests/test_graph.py`
 
-Replace `search` and the answer chain's LLM with fakes (use `monkeypatch`; LangChain's `GenericFakeChatModel` works as a fake LLM).
+Replace `search` and the answer step's model with fakes (`monkeypatch` swaps a function for a fake during one test; LangChain's `GenericFakeChatModel` works as a fake model).
 
-- Passages found, the fake LLM returns "Answer [1]" -> the answer has a source with the right file and page.
-- No relevant passages -> `abstained` is true and the LLM fake was **not called**.
+- Retrieved documents found, the fake LLM returns "Answer [1]" -> the answer has a source with the right file and page.
+- No relevant retrieved documents -> `abstained` is true and the LLM fake was **not called**.
 - A blocked question -> `blocked` is true and neither search nor LLM was called.
-- A poisoned passage ("ignore previous instructions") is dropped before the LLM sees it.
+- A retrieved document that the fake Prompt Guard flags is dropped before the LLM sees it.
 
 ### `tests/test_api.py`
 
@@ -86,11 +85,12 @@ Use FastAPI's `TestClient` (`from fastapi.testclient import TestClient`) and rep
 - `PUT /datasets/../secret` or an unknown name -> rejected.
 - `POST /feedback` with `score: 5` -> rejected.
 - `POST /evals/run` with an unknown evaluator -> rejected, and a second run while one is running -> rejected.
+- `PUT /settings` with a wrong type for a threshold -> rejected.
 
 ### `tests/test_evaluators.py`
 
-- The code evaluators (`retrieval_hit`, `abstention`, `citation_valid`) with hand-made inputs: a hit, a miss, a near-page hit, an abstention on an unanswerable question and a wrong abstention.
-- For the LLM-judge evaluators, test only the part around the call: with a fake `chat` returning `{"score": 1, "reason": "x"}` the evaluator returns score 1, and with bad JSON it returns a sensible failure rather than crashing.
+- The custom code evaluators (`retrieval_hit`, `abstention`, `citation_valid`, `blocked_by_guard`) with hand-made inputs: a hit, a miss, a near-page hit, an abstention on an unanswerable question and a wrong abstention.
+- For the `openevals` evaluators, test only your wrappers: with a fake judge result the wrapper returns 0 or 1 in the direction "1 is good" (including the flipped ones).
 
 ## What not to test
 
@@ -106,4 +106,4 @@ Tests answer "does the code still work?" Evaluators answer "is the app still goo
 - [ ] `uv run pytest` passes with no internet connection.
 - [ ] Every guard has at least one test that blocks and one that allows.
 - [ ] Every endpoint has at least one test for valid input and one for invalid input.
-- [ ] The known weaknesses are recorded as `xfail` tests with a reason.
+- [ ] The known weaknesses are recorded as `xfail` tests with a reason (`xfail` is pytest's way of saying "this is a known problem").

@@ -1,6 +1,6 @@
 # Phase 1: Search (dense, sparse, hybrid)
 
-**Goal:** from a script, type a question and see the top 5 passages found by dense, sparse and hybrid search, with file and page.
+**Goal:** from a script, type a question and see the top 5 retrieved documents found by dense, sparse and hybrid search, with file and page.
 **This phase teaches:** dense vs sparse search.
 
 ## The plan
@@ -51,15 +51,15 @@ Add `if __name__ == "__main__": ingest_all()` so you can run `uv run python -m a
 
 ## Step 4. The three searches (`app/retrieve.py`)
 
-All three searches are ready-made LangChain objects. Build them once at module level and reuse them. No hand-written ranking code.
+All three searches are ready-made LangChain objects. Build them once and reuse them. You do not write any ranking code yourself.
 
-**Dense:** `QdrantVectorStore.from_existing_collection(embedding=embeddings, collection_name=COLLECTION, path=str(QDRANT_DIR))`. Then `store.similarity_search_with_score(query, k=k)` returns `(Document, cosine_score)` pairs. The store embeds the question itself, which is why `embeddings` is imported here too.
+**Dense:** open the saved Qdrant data with `QdrantVectorStore.from_existing_collection(embedding=embeddings, collection_name=COLLECTION, path=str(QDRANT_DIR))`. Then `store.similarity_search_with_score(query, k=k)` returns the best `k` chunks, each with a score (a cosine score: how close the meaning of the chunk is to the question). The store turns the question into numbers by itself, which is why `embeddings` is imported here too.
 
-**Sparse (BM25):** `BM25Retriever.from_documents(docs, k=k, preprocess_func=words)` from `langchain-community` (it uses `rank-bm25` underneath). `docs` are the chunks rebuilt from `chunks.jsonl` as `Document(page_content=text, metadata={id, file, page})`. The default tokenizer does not lowercase, so pass `preprocess_func=lambda t: t.lower().split()`. Punctuation stays attached to words (`functions,` is not `functions`), but a code like `PS.1.1` stays one word, which is what makes exact-code search work. Note this weakness for phase 10. Use `retriever.invoke(query)`. This returns documents only, with no scores. For the "is anything relevant" check in phase 2, `retriever.vectorizer.get_scores(query.lower().split())` gives the raw BM25 scores.
+**Sparse (BM25):** `BM25Retriever.from_documents(docs, k=k, preprocess_func=words)` from `langchain-community` (it uses `rank-bm25` underneath). `docs` are the chunks rebuilt from `chunks.jsonl` as `Document(page_content=text, metadata={id, file, page})`. By default BM25 does not turn words into lowercase, so pass `preprocess_func=lambda t: t.lower().split()` (lowercase the text and cut it into words at the spaces). Punctuation stays attached to words (`functions,` is not the same as `functions`). But a code like `PS.1.1` stays one word, which is what makes exact-code search work. Write this weakness down for phase 10. Search with `retriever.invoke(query)`. It returns the documents only, with no scores. For the "is anything relevant" check in phase 2, `retriever.vectorizer.get_scores(query.lower().split())` gives the raw BM25 scores.
 
-**Hybrid (RRF):** `EnsembleRetriever(retrievers=[dense_retriever, sparse_retriever], weights=[0.5, 0.5], c=60)` from `langchain_classic.retrievers`. It merges the two ranked lists with reciprocal rank fusion (`1/(c + rank)`, `c=60` is the usual constant). Make the dense one with `store.as_retriever(search_kwargs={"k": 20})`, and the BM25 one with `k=20`. Keep the top `k` of the merged list.
+**Hybrid (RRF):** `EnsembleRetriever(retrievers=[dense_retriever, sparse_retriever], weights=[0.5, 0.5], c=60)` from `langchain_classic.retrievers`. It combines the two result lists by position: a chunk gets the points `1/(c + position)` from each list, and `c=60` is the usual constant. This method is called reciprocal rank fusion (RRF). Make the dense retriever with `store.as_retriever(search_kwargs={"k": 20})`, and the BM25 one with `k=20`. Keep the top `k` chunks of the combined list.
 
-Finally add one entry point: `search(query, mode, k=5)` where `mode` is `"dense"`, `"sparse"` or `"hybrid"`. It converts the Documents to dicts `{id, file, page, text, score, rank}` (`score` is only filled for dense) so the rest of the app does not care which search ran.
+Finally add one function the rest of the app will use: `search(query, mode, k=5)`, where `mode` is `"dense"`, `"sparse"` or `"hybrid"`. It returns each result as a dictionary `{id, file, page, text, score, rank}` (`score` is only filled for dense). That way the rest of the app does not need to know which search ran.
 
 Qdrant's local mode lets only one program open the folder at a time. Create the store once and reuse it. Do not run the ingest script while the API is running.
 
@@ -113,7 +113,7 @@ Run each command from the project root (`C:\Users\asaur\Projects\rag-evaluation-
 - [ ] The script runs without an error and prints 9 blocks (3 questions x 3 modes).
 - [ ] Every block has exactly 5 results, each with a file and a page.
 - [ ] `SP 800-218 PS.1.1`: **sparse** puts a chunk from `nist-sp-800-218-ssdf.pdf` that contains `PS.1.1` at or near the top, and dense does so less reliably.
-- [ ] The loose-wording question (software tampering): **dense** finds sensible passages (SSDF or CSF), and sparse is weaker.
+- [ ] The loose-wording question (software tampering): **dense** finds sensible retrieved documents (SSDF or CSF), and sparse is weaker.
 - [ ] At least one question where dense and sparse gave clearly different top results. Write down which question and what differed.
 - [ ] **Hybrid** results include items from both the dense and the sparse lists.
 - [ ] Calling `search(question, "banana")` (an unknown mode) fails with a clear error, not a silent empty list.

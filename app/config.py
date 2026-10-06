@@ -17,3 +17,7 @@ EMBED_URL ="https://router.huggingface.co/hf-inference/models/BAAI/bge-small-en-
 EMBED_DIM = 384
 FAST_MODEL = "openai/gpt-oss-20b"
 STRONG_MODEL = "openai/gpt-oss-120b"
+
+# Safety models on Groq (used by the guards in phase 6)
+PROMPT_GUARD_MODEL = "meta-llama/llama-prompt-guard-2-86m"   # catches trick questions ("prompt injection")
+SAFEGUARD_MODEL = "openai/gpt-oss-safeguard-20b"             # checks a text against safety rules we give it

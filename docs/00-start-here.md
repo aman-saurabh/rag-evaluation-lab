@@ -6,8 +6,8 @@ Read this once. Every later phase uses these words.
 
 You give the app some PDFs. When you ask a question:
 
-1. The app **searches** the PDFs for the few passages most likely to hold the answer.
-2. It gives those passages to an AI model and says: "answer using only these".
+1. The app **searches** the PDFs and retrieves the few pieces of text (the **retrieved documents**) most likely to hold the answer.
+2. It gives those retrieved documents to an AI model and says: "answer using only these".
 3. The AI writes an answer and names its sources (file and page).
 
 This is called **RAG** (retrieval-augmented generation). "Retrieval" is step 1. "Generation" is step 2 and 3. RAG is used so the AI answers from your documents and does not make things up.
@@ -19,7 +19,7 @@ This is called **RAG** (retrieval-augmented generation). "Retrieval" is step 1. 
 | **Chunk** | A small piece of a document, about one paragraph. We search chunks, not whole PDFs. |
 | **Dense search** | Each chunk is turned into a list of numbers (an **embedding**) that captures its *meaning*. A question is turned into numbers the same way. Chunks whose numbers are close to the question's numbers are returned. It finds "car" when you ask about "automobile". |
 | **Sparse search** | Matches the *exact words*. We use **BM25**, the classic keyword-ranking method. It finds the chunk containing "CSF 2.0" when you type exactly that. It misses synonyms. |
-| **Hybrid search** | Run both and merge the two result lists (we use **RRF**, reciprocal rank fusion: a chunk ranked high in both lists wins). |
+| **Hybrid search** | Run both searches and combine the two result lists. A chunk that ranks high in both lists wins. (The method is called **RRF**, reciprocal rank fusion.) |
 | **Embedding** | The list of numbers that stands for a text. We get them from a HuggingFace model over the internet. |
 | **Vector store** | A database for embeddings. We use **Qdrant**, running locally in a folder (no account needed). |
 | **LLM** | The AI model that writes the answer. We use Groq, which has a free tier. |
@@ -34,7 +34,11 @@ This is called **RAG** (retrieval-augmented generation). "Retrieval" is step 1. 
 | **Prompt injection** | A question or a document containing text like "ignore your instructions and...". It tries to take control of the AI. |
 | **Code injection** | Text that tries to make the app produce or run harmful code or commands. |
 | **Toxicity** | Rude, hateful or abusive language. |
-| **Abstain** | Saying "I don't know" when the documents do not contain the answer. This is a good behaviour. |
+| **Abstain** | Saying "I don't know" when the documents do not contain the answer. This is good behaviour. |
+| **Retrieved documents** | The few chunks the search found for a question. They are what the AI is allowed to use for its answer. |
+| **Token** | A small piece of text, about three quarters of a word. AI services count and limit usage in tokens. |
+| **Annotation queue** | A list in LangSmith of traces waiting for a person to review them. |
+| **Online evaluator** | An evaluator that LangSmith runs by itself on a sample of your live questions. |
 
 ## Guards vs evaluators (the most important difference)
 
@@ -63,7 +67,7 @@ Streamlit page  --HTTP-->  FastAPI backend  -->  app/ code  -->  Groq, HuggingFa
 ## The question's journey
 
 ```
-question -> guard_in -> search -> guard_passages -> enough relevant text?
+question -> guard_in -> search -> guard_documents -> enough relevant text?
                                                       |no -> "I don't know"
                                                       |yes -> LLM answer -> guard_out -> shown to user
 ```
@@ -94,9 +98,9 @@ rag-evaluation-lab/
     embeddings.py            the HuggingFace embeddings object (used by ingest and retrieve)
     retrieve.py              dense, sparse, hybrid (LangChain retrievers)
     llm.py                   the two ChatGroq models (fast and strong)
-    guards.py                all the guards
+    guards.py                the guard checks (safety models, PII middleware, citation check)
     graph.py                 the LangGraph flow
-    evaluators.py            all the evaluators
+    evaluators.py            the evaluators (openevals judges plus a few custom ones)
     eval_runner.py           runs a dataset through the app
   api/
     main.py                  starts FastAPI
@@ -123,6 +127,8 @@ You will create these files phase by phase. Do not create them all upfront.
 | `langgraph` | The graph |
 | `langsmith` | Traces, datasets, evaluators, feedback |
 | `langchain-groq` | `ChatGroq`, the AI model (installs `groq` itself; added in phase 2) |
+| `langchain` | `create_agent` and `PIIMiddleware` for the answer guards (added in phase 6) |
+| `openevals` | LangChain's ready-made evaluator prompts: hallucination, toxicity, prompt injection and more (added in phase 8) |
 | `rank-bm25` | Sparse search (used underneath by LangChain's `BM25Retriever`) |
 | `qdrant-client`, `langchain-qdrant` | Dense search store (`QdrantVectorStore`) |
 | `pypdf` | Read text from PDFs (used underneath by LangChain's `PyPDFLoader`) |
@@ -140,7 +146,7 @@ You will create these files phase by phase. Do not create them all upfront.
 
 ## Rules we follow
 
-0. **Use LangChain components instead of hand-written code** (loaders, splitters, embeddings, vector stores, retrievers, chat models, prompts, output parsers). The only plain Python is where it is the lesson (the crude guards in phase 6) or where no component exists.
+0. **Use LangChain, LangGraph and LangSmith features instead of hand-written code** (loaders, splitters, embeddings, vector stores, retrievers, chat models, prompts, output parsers, middleware, graph nodes, rate limiters, LangSmith feedback, datasets and evaluators). Plain Python only where none of them covers the need.
 
 1. Small steps. Every phase ends with something you can run.
 2. Change one thing, run it, then move on.

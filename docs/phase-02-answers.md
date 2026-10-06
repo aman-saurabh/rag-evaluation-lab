@@ -53,11 +53,11 @@ answer_chain = answer_prompt | fast_llm | StrOutputParser()
 
 Dense and BM25 scores are on different scales, so keep this rule simple:
 
-- For `dense`: if the best score (cosine similarity) is below a threshold (start with 0.55), treat it as nothing relevant.
-- For `sparse`: if the best BM25 score (`retriever.vectorizer.get_scores(...)`, see phase 1) is 0 (no query word appears anywhere), treat it as nothing relevant.
-- For `hybrid`: its results come from rank merging and have no score, so we cannot judge them. We only check that something was found (`len(retrieved_docs) > 0`), which is almost always true. So in hybrid mode the model itself decides to say "I don't know". This is a known weakness of hybrid mode in this app; note it in phase 10.
+- For `dense`: if the best score (cosine similarity, a number that says how close two meanings are) is below a minimum (start with 0.55), treat it as "nothing relevant".
+- For `sparse`: if the best BM25 score (`retriever.vectorizer.get_scores(...)`, see phase 1) is 0, which means no word of the question appears anywhere in the documents, treat it as "nothing relevant".
+- For `hybrid`: the results come from combining two lists and have no score, so we cannot judge them. We only check that something was found (`len(retrieved_docs) > 0`), which is almost always true. So in hybrid mode the AI model alone decides whether to say "I don't know". This is a known weakness of hybrid mode in this app. Write it down for phase 10.
 
-Put the threshold as a constant (`DENSE_MIN_SCORE = 0.55`) at the top of `app/graph.py`, because only the graph uses it (phase 6 moves it into the settings file). You will tune it in phase 10 using the unanswerable questions. Do not worry about getting them perfect now.
+Put the minimum as a constant (`DENSE_MIN_SCORE = 0.55`) at the top of `app/graph.py`, because only the graph uses it (phase 6 moves it into the settings file). You will tune it in phase 10, using the questions that have no answer. Do not worry about getting it perfect now.
 
 ## Step 4. Build the graph (`app/graph.py`)
 
@@ -93,7 +93,7 @@ Expose a plain function `ask(question, mode) -> dict` that runs the graph and re
 The chat remembers earlier turns so follow-ups like "What is its purpose?" work.
 
 - `ask(question, mode, session_id=None)`: the `session_id` is the LangGraph `thread_id`. Same id = same conversation. No id = a fresh chat every time (use this for evaluation runs).
-- State gets a `history` field (the last 3 question/answer pairs). `remember` adds the new turn to the list, then `history[-3:]` keeps only the last 3 items (a negative number in a slice counts from the end), so old turns are dropped. `InMemorySaver` keeps it per session, so a backend restart forgets everything (fine for practice).
+- The state gets a `history` field: the last 3 questions with their answers. `remember` adds the new question and answer to the list. Then `history[-3:]` keeps only the last 3 entries, because a negative number in square brackets counts from the end of the list. Older ones are dropped. `InMemorySaver` stores this history for each session. It lives only in memory, so restarting the backend forgets all chats (fine for practice).
 - New node `condense` (first): if there is history, `condense_chain` (the fast LLM) rewrites the current question to stand alone ("What is its purpose?" becomes "What is the purpose of the GOVERN function?") so search works. The first question skips this call.
 - New node `remember` (last): appends the turn to `history`.
 - History goes into the answer prompt only to understand the question, never as a source.
@@ -170,4 +170,4 @@ Run `uv run python try_ask.py` from the project root.
 - [ ] The Acme question returns "I don't know" in at least one mode, and you know why the others did not (look at the threshold rule in step 3).
 - [ ] Memory works: in the "memory ON" part, `searched for` for "What is its purpose?" mentions GOVERN (the app rewrote the question using the first one). In the "memory OFF" part, `searched for` is just "What is its purpose?" and the answer is "I don't know" or off-topic.
 - [ ] The line "ask() returns these keys" lists `abstained`, `answer`, `relevant`, `retrieved_docs`, `search_query` and `sources`.
-- [ ] Each source's page matches the passage the answer actually used: open the PDF at that page and check one answer by eye.
+- [ ] Each source's page matches the retrieved document the answer actually used: open the PDF at that page and check one answer by eye.

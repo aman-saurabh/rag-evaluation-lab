@@ -24,7 +24,7 @@ LANGSMITH_PROJECT=rag-evaluation-lab
 Because the app is a LangGraph graph built from LangChain parts, LangSmith traces it by itself once the environment variables are set:
 
 - The graph run is the top of the tree. Every node (`condense`, `retrieve`, `generate`, `cite`, `remember`, and later the guards) is a child step.
-- Inside a node, LangChain objects (the BM25 retriever, the vector store search, the prompt, the `ChatGroq` call) appear as their own steps, with run types `retriever`, `llm` and so on already set. The LLM step shows the exact prompt and the token counts.
+- Inside a node, the LangChain parts (the BM25 search, the vector store search, the prompt, the `ChatGroq` call) appear as their own steps, already labelled (`retriever`, `llm` and so on). The LLM step shows the exact prompt and the number of tokens.
 - Use `@traceable` only for a plain Python function you want to see as its own step, such as a single guard check inside a node:
 
 ```python
@@ -53,7 +53,7 @@ Give `ask()` an optional `tags` argument (default: none) so callers can add thei
 
 The UI will need a link to the trace and, in phase 7, an id to attach feedback to.
 
-- Create a UUID before the call: `run_id = uuid.uuid4()`.
+- Create a unique id before the call: `run_id = uuid.uuid4()` (a UUID, a long random id).
 - Pass it in the same config (see step 3).
 - Return it from `ask()` as `run_id` (as text: `str(run_id)`).
 

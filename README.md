@@ -2,7 +2,7 @@
 
 A small practice project. You ask questions about your own documents, and an AI answers using only those documents. Along the way you learn four things:
 
-1. **Dense vs sparse search.** Two ways to find the right passage in a document, and when each one wins.
+1. **Dense vs sparse search.** Two ways to find the right part of a document, and when each one wins.
 2. **Guards.** Checks that block bad questions and bad answers while the app is running.
 3. **Evaluators.** Automatic tests that score the answers (is it true? is it safe? did it find the right page?).
 4. **Monitoring.** Watching every request in LangSmith: how long it took, what it cost, what went wrong.

@@ -75,12 +75,12 @@ Each file holds the endpoints of one job.
 
 **`DELETE /documents/{name}`**: delete the PDF, then re-index.
 
-**Refreshing the search after an upload or delete.** The in-memory BM25 index and the Qdrant handle must be rebuilt. This is done by `reload_index()` in `app/retrieve.py`:
+**Refreshing the search after an upload or delete.** After the documents change, the keyword (BM25) index in memory and the connection to the Qdrant folder must be rebuilt. The function `reload_index()` in `app/retrieve.py` does this:
 1. It closes the Qdrant client first, because on Windows the Qdrant folder cannot be deleted while it is open.
 2. It runs ingest (`ingest_all()`), which rebuilds `chunks.jsonl` and the Qdrant folder.
 3. It runs `load_index()`, which creates the search objects again (`store`, `bm25`, `hybrid`).
 
-Other files must not keep their own copy of those objects, because the copy would be old after a reload. So instead of `from app.retrieve import bm25`, they write `from app import retrieve as retrieval` and use `retrieval.bm25` or `retrieval.store` each time. That always gives the current object. (`graph.py` uses it for the sparse check, `main.py` for `/health`.)
+Other files must not keep their own copy of those search objects, because the copy would be out of date after a reload. So instead of `from app.retrieve import bm25`, they write `from app import retrieve as retrieval` and use `retrieval.bm25` or `retrieval.store` each time. That always gives the current object. (`graph.py` does this for the sparse check, and `main.py` for `/health`.)
 
 Other rules in `routes_documents.py`:
 - The file must start with `%PDF`, so a renamed text file is rejected.
