@@ -46,7 +46,7 @@ data/qdrant/
 
 ## Step 5. Check your keys
 
-`.env` and `.env.example` already exist. The three keys (Groq, HuggingFace, LangSmith) were copied from the old project, so you do not need to get them again. Open `.env` and check that all three have a value. `.env.example` looks like this (no values):
+`.env` and `.env.example` already exist. The three keys (Groq, HuggingFace, LangSmith) are already in `.env`, so you do not need to get them again. Open `.env` and check that all three have a value. `.env.example` looks like this (no values):
 
 ```
 GROQ_API_KEY=

@@ -1,5 +1,5 @@
 # Golden questions. Page numbers are 1-based PDF page numbers (the page index in the PDF file, not the printed label).
-# Copied from the old project and checked there on 2026-10-05. Re-check any you change.
+# Checked against the PDFs on 2026-10-05. Re-check any you change.
 # type: answerable | unanswerable (answer: null) | multi_document
 
 - id: A01

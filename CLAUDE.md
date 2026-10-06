@@ -15,9 +15,9 @@ Stack: **FastAPI** (backend) + **Streamlit** (UI, talks to the backend over HTTP
 
 The purpose is learning the LangChain, LangGraph and LangSmith ecosystem and the standard industry approaches. Use those three as much as possible.
 
-## Why this project exists: the lesson from the last one
+## Why simplicity matters here
 
-The user spent many days on an earlier, much larger project (`C:\Users\asaur\Projects\ragsqaud`, three Python packages, planning docs, licence checks, CI, pre-commit, OCR, Docling, multi-tenancy, packaging) and ended up with almost no working app. They scrapped it for being **overly complicated**. **Do not repeat that.** That old folder is not to be used or edited.
+This app must stay small, working and understandable. A large setup (many packages, planning documents, licence checks, CI, pre-commit, OCR, multi-tenancy, packaging) ends with almost no working app. **Do not build that.**
 
 ## Simplicity rules (these override everything else)
 
@@ -48,7 +48,7 @@ The user spent many days on an earlier, much larger project (`C:\Users\asaur\Pro
 ## Already prepared (do not redo)
 
 - `README.md` and `docs/`: the full plan, phase 0 to 11, step by step.
-- `.env` with `GROQ_API_KEY`, `HF_TOKEN` and `LANGSMITH_API_KEY` (copied from the old project; never print them), plus `LANGSMITH_TRACING=true` and `LANGSMITH_PROJECT=rag-evaluation-lab`. `.env.example` and `.gitignore` exist.
+- `.env` with `GROQ_API_KEY`, `HF_TOKEN` and `LANGSMITH_API_KEY` (never print them), plus `LANGSMITH_TRACING=true` and `LANGSMITH_PROJECT=rag-evaluation-lab`. `.env.example` and `.gitignore` exist.
 - `data/pdfs/`: five NIST PDFs (text PDFs, free to reuse), sources in `data/pdfs/SOURCES.md`.
 - `data/datasets/golden.yaml`: 19 checked questions (9 answerable, 6 unanswerable, 4 multi-document). Pages are 1-based PDF page numbers.
 - **Done:** phases 0 to 5 (setup, search, answers with memory, tracing, FastAPI, Streamlit). **Next:** phase 6. Do not change the phase 0 to 5 docs; changes to earlier code are made inside the later phases that need them.

@@ -17,7 +17,7 @@ In phase 9 you start this from the web page. In this phase you build the pieces.
 
 The datasets live in `data/datasets/` as YAML files. They are uploaded to LangSmith when a run starts.
 
-**`golden.yaml`**: real questions about your five PDFs. It already exists with 19 questions (9 with an answer, 6 without, 4 that need two PDFs), copied from the old project. Add about 5 more questions of your own, for a total of about 24:
+**`golden.yaml`**: real questions about your five PDFs. It already exists with 19 questions (9 with an answer, 6 without, 4 that need two PDFs). Add about 5 more questions of your own, for a total of about 24:
 
 | Kind | How many | What it checks |
 |---|---|---|
