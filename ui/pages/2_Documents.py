@@ -44,10 +44,15 @@ for document in documents:
     chunks_column.write(f"{document['chunks']} chunks")
 
     if button_column.button("Delete", key=f"delete_{document['file']}", disabled=not is_sure):
+        error_message = ""
         with st.spinner("Deleting and re-indexing..."):
             try:
                 client.delete_document(document["file"])
             except httpx.HTTPStatusError as error:
-                st.error(f"The backend returned an error: {error.response.text}")
-                st.stop()
+                error_message = f"The backend returned an error: {error.response.text}"
+
+        # The spinner is closed here. Only now it is safe to show the error and stop the page.
+        if error_message:
+            st.error(error_message)
+            st.stop()
         st.rerun()  # reload the page so the list is up to date

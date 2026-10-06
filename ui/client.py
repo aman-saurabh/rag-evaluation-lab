@@ -45,6 +45,29 @@ def delete_document(name):
     return response.json()
 
 
+def feedback(run_id, score, comment):
+    """score: 1 = thumbs up, 0 = thumbs down."""
+    response = httpx.post(
+        f"{BASE}/feedback",
+        json={"run_id": run_id, "score": score, "comment": comment},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_settings():
+    response = httpx.get(f"{BASE}/settings", timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def save_settings(settings):
+    response = httpx.put(f"{BASE}/settings", json=settings, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
 def health():
     response = httpx.get(f"{BASE}/health", timeout=60)
     response.raise_for_status()

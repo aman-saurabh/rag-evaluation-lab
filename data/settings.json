@@ -1,0 +1,32 @@
+{
+  "guards": {
+    "length": {
+      "enabled": true
+    },
+    "prompt_injection_input": {
+      "enabled": true
+    },
+    "safety_input": {
+      "enabled": true
+    },
+    "prompt_injection_document": {
+      "enabled": true
+    },
+    "pii_secrets_output": {
+      "enabled": true
+    },
+    "safety_output": {
+      "enabled": true
+    },
+    "citation_output": {
+      "enabled": true
+    },
+    "hallucination_output": {
+      "enabled": false
+    }
+  },
+  "thresholds": {
+    "dense_min_score": 0.55,
+    "prompt_guard_min_score": 0.5
+  }
+}

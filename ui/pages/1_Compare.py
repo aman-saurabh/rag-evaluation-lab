@@ -8,15 +8,21 @@ st.write("The same question is asked in dense, sparse and hybrid mode. This uses
 question = st.text_input("Question")
 
 if st.button("Compare") and question:
+    error_message = ""
     with st.spinner("Asking all three modes..."):
         try:
             result = client.compare(question)
         except httpx.ConnectError:
-            st.error(client.BACKEND_DOWN_MESSAGE)
-            st.stop()
+            error_message = client.BACKEND_DOWN_MESSAGE
         except httpx.HTTPStatusError as error:
-            st.error(f"The backend returned an error: {error.response.text}")
-            st.stop()
+            error_message = f"The backend returned an error: {error.response.text}"
+        except httpx.TimeoutException:
+            error_message = "The backend took too long to answer. Please try again."
+
+    # The spinner is closed here. Only now it is safe to show the error and stop the page.
+    if error_message:
+        st.error(error_message)
+        st.stop()
 
     modes = ["dense", "sparse", "hybrid"]
     columns = st.columns(3)
@@ -29,4 +35,4 @@ if st.button("Compare") and question:
             if response["abstained"]:
                 st.badge("Abstained", color="orange")
             for source in response["sources"]:
-                st.caption(f"{source['file']}, page {source['page']}")
+                st.caption(f"file: {source['file']}, page: {source['page']}")

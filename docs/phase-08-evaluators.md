@@ -86,6 +86,8 @@ hallucination_judge = create_llm_as_judge(
 | `prompt_injection` | `PROMPT_INJECTION_PROMPT` | **the question only**: is it a trick question | a trick was found (**bad**) | see below |
 | `code_injection` | `CODE_INJECTION_PROMPT` | the text you pass in: does it contain harmful code | harmful code found (**bad**) | **reverse** the score |
 
+The live guard `hallucination_output` from phase 6 uses the same `openevals` rules (`RAG_GROUNDEDNESS_PROMPT`). **On Groq, `create_llm_as_judge` can fail** with the error "Tool choice is required, but model did not call a tool", because it asks the model for a tool call (see phase 6, step 2). If you see it, build the judge as in phase 6: the `openevals` rules text in a LangChain chain with `with_structured_output(..., method="json_schema", strict=True)`. The guard checks **one** answer while the app runs. The evaluator here scores **all** your test questions afterwards, so you can see how often answers are made up.
+
 Read each set of rules before you use it. For example, `print(PROMPT_INJECTION_PROMPT)`. The table above comes from reading them on 2026-10-06, and they may change.
 
 **A small helper function for each judge.** Every judge expects certain inputs and scores in its own direction. So write a small function around each one (a "wrapper"). It does three things: it picks the right fields from our run (for `hallucination`, the retrieved documents joined into one text), it calls the judge, and it turns the result into 0 or 1. Where the table says **reverse**, it also swaps 1 and 0, so that 1 always means good.

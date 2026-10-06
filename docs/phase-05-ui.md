@@ -53,6 +53,7 @@ Layout:
   - a link "Open trace in LangSmith" if `trace_url` is set,
   - the mode used.
 - While waiting: `with st.spinner("Thinking..."):`.
+- Errors: catch them inside the spinner, but show them (`st.error(...)` and `st.stop()`) only **after** the `with st.spinner` block has closed. If `st.stop()` runs inside the spinner, the spinner can keep spinning. Also catch `httpx.TimeoutException` (the backend took too long).
 
 ## Step 3. Compare page (`ui/pages/1_Compare.py`)
 

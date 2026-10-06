@@ -127,7 +127,7 @@ run = client.read_run(run_id)
 trace_url = client.get_run_url(run=run, project_name="rag-evaluation-lab")
 ```
 
-The trace is sent in the background, so `read_run` may fail for a moment right after the answer. Wait a second and retry once. If it still fails, return `trace_url = None`. Never let this break the answer.
+The trace is sent in the background, so `read_run` may fail for a moment right after the answer. First call `wait_for_all_tracers()` (`from langchain_core.tracers.langchain import wait_for_all_tracers`), which waits until everything that is waiting to be sent has been sent. A trace with many steps (the guards in phase 6) takes longer to send, so waiting a fixed second is not enough. Then retry `read_run` a few times (in `routes_ask.py`: `TRACE_LINK_TRIES = 5` tries, `TRACE_LINK_WAIT_SECONDS = 2` seconds apart, so at most about 10 seconds). Change these two numbers if you need more or less time. If it still fails, return `trace_url = None`. Never let this break the answer.
 
 ## You are done when
 

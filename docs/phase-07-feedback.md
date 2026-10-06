@@ -13,23 +13,23 @@ The automatic evaluators in phase 8 are only guesses made by code or by another 
 
 ```python
 class FeedbackRequest(BaseModel):
-    run_id: str
-    score: int          # 1 = thumbs up, 0 = thumbs down
+    run_id: UUID                    # the trace id that /ask returned
+    score: int = Field(ge=0, le=1)  # 1 = thumbs up, 0 = thumbs down
     comment: str = ""
 ```
 
-Check that `score` is 0 or 1 and that `run_id` is a valid UUID (the long id with dashes). Then save it in LangSmith:
+You do not write the checks by hand. In `api/schemas.py`, `run_id` has the type `UUID` and `score` is `Field(ge=0, le=1)`, so FastAPI rejects a `run_id` that is not a valid UUID (the long id with dashes) and a `score` that is not 0 or 1. Then save it in LangSmith:
 
 ```python
 from langsmith import Client
 Client().create_feedback(run_id, key="user_score", score=score, comment=comment or None)
 ```
 
-Add `routes_feedback.router` in `api/main.py`. Return `{"ok": true}`. If LangSmith fails, return a clear error message and do not crash.
+Add `routes_feedback.router` in `api/main.py`. Return `{"ok": true}`. If LangSmith fails, catch the error and return a short message (status 502: "LangSmith could not save the feedback"), not the real error, because it could contain details about the keys.
 
 ## Step 2. The buttons in the chat (`ui/Home.py`)
 
-Under each answer, show two buttons (👍 and 👎). After a 👎, show a small box for a comment ("What was wrong?"). When the user clicks, call `client.feedback(run_id, score, comment)` and replace the buttons with "Thanks, saved". Remember in `st.session_state` which answers already got feedback, so the buttons do not appear again when the page reloads.
+Under each answer, show two buttons (👍 and 👎). After a 👎, show a small box for a comment ("What was wrong?"). When the user clicks, call `client.feedback(run_id, score, comment)` and replace the buttons with "Thanks, saved". Remember in `st.session_state.feedback_given` (a list of run ids) which answers already got feedback, so the buttons do not appear again when the page reloads. Each button needs its own `key`, made from the run id (for example `key=f"up_{run_id}"`), because there is one set of buttons for every answer on the page. A thumbs down sets a flag in `st.session_state`, so the comment box stays open after the page reloads.
 
 Add a `feedback(...)` function in `ui/client.py`.
 
