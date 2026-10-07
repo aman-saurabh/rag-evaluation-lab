@@ -8,9 +8,11 @@ A run takes minutes: about 24 questions, each with an answer and several judge c
 
 ## Step 1. The runner (`app/eval_runner.py`)
 
-`run_evaluation(job, dataset, mode, evaluators)` does this:
+Phase 8 already built the core in `app/eval_runner.py`: `upload_dataset(dataset)` and `run_evaluation(dataset, mode, evaluator_names, limit)`. This phase wraps them in a background job with progress. The steps below describe what the job does.
 
-1. Load the YAML file for `dataset` and upload it to LangSmith as a dataset (`client.create_dataset(...)`, `client.create_examples(...)`). Use a stable name such as `rel-golden`. If it already exists, update it (delete the old examples and add the current ones), so edits made on the Datasets page take effect.
+`run_evaluation(dataset, mode, evaluator_names, job=job)` does this (and `run_job(...)` calls it once per mode, then stores the scores):
+
+1. Load the YAML file for `dataset` and upload it to LangSmith as a dataset (`client.create_dataset(...)`, `client.create_examples(...)`). The name is `rag-lab-<dataset>`, for example `rag-lab-golden` (already done by `upload_dataset` in phase 8). If it already exists, update it (delete the old examples and add the current ones), so edits made on the Datasets page take effect.
 2. Call `evaluate(target, data=dataset_name, evaluators=[...], experiment_prefix=f"{dataset}-{mode}", max_concurrency=1, metadata={"mode": mode})`.
    - `max_concurrency=1` runs one example at a time, so you do not hit the Groq limit.
 3. After each example, update `job["done"]`, so the page can show progress. In `langsmith` 0.14.4, `evaluate()` has no way to report progress, so count it yourself: add 1 to `job["done"]` at the end of your `target` function (and at the end of each evaluator, if you want finer progress).
@@ -37,6 +39,7 @@ If the server restarts, the jobs in memory are lost. The experiments stay in Lan
 | URL | What it does |
 |---|---|
 | `POST /evals/run` | Takes `dataset` (golden, attacks_prompt or attacks_code), `mode` (dense, sparse, hybrid or all) and `evaluators` (a list of names). Check every value against the allowed lists. Start the run with FastAPI's `BackgroundTasks` and return `{"job_id": "..."}`. |
+| `GET /evals/options` | Returns all evaluator names and the default ones for each dataset, so the page can fill its choices. (Must be written above `/evals/{job_id}`.) |
 | `GET /evals/{job_id}` | Returns the status, `done` and `total`, and (when finished) the scores for each mode and evaluator, and the link to the LangSmith experiment. |
 
 `mode = "all"` runs the three modes one after another as three experiments in the same job. This is the dense vs sparse vs hybrid comparison.
@@ -47,7 +50,7 @@ Note: `BackgroundTasks` runs the work after the reply is sent, inside the same s
 
 **Start a run:**
 - A dataset selector, a mode selector (including "all") and a multi-select of evaluators (already filled with the sensible set for the chosen dataset from phase 8).
-- A warning that shows the estimated number of LLM calls and says "this takes several minutes".
+- A warning that shows the number of questions that will run (not an exact LLM-call count, because it depends on the guards) and says "this takes several minutes".
 - A Run button: call `POST /evals/run` and remember the `job_id` in `st.session_state`.
 
 **Watch it:**
@@ -63,11 +66,73 @@ Do not rebuild the details of each question. LangSmith's experiment page already
 
 ## Step 5. Run the first full comparison
 
-1. Dataset `golden`, mode `all`, the default evaluators. Wait.
-2. Dataset `attacks_prompt`, mode `hybrid`, with all guards **on**. Note the scores.
-3. Switch the guards off on the Settings page and run `attacks_prompt` again. Note the difference.
-4. Do the same for `attacks_code`.
-5. In LangSmith, open the three golden experiments and use **Compare** to see them side by side.
+Follow these parts in order. The LangSmith menu names (part E) were not checked on screen and may differ a little.
+
+### A. Start everything
+
+1. Stop the backend and Streamlit if they are running (press `Ctrl+C` in each terminal).
+2. In PowerShell terminal 1, from the project folder, run:
+   ```powershell
+   uv run uvicorn api.main:app
+   ```
+3. In terminal 2, from the project folder, run (the entry file is `ui/Home.py`):
+   ```powershell
+   uv run streamlit run ui/Home.py
+   ```
+4. In the browser, open the **Evaluations** page from the left sidebar.
+
+### B. Run 1: golden, all three modes (the long one)
+
+1. **Dataset:** `golden`. **Search mode:** `all`. **Evaluators:** leave the default list.
+2. Press **Run**.
+3. A progress bar appears and moves ("N of 72 questions answered"). Leave the page open and wait. Expect several minutes.
+4. When the status is `done`, a table of scores appears (evaluators as rows, dense, sparse and hybrid as columns), with links to LangSmith under it.
+5. If the status is `failed`, copy the red error text and send it to Claude.
+
+To try it cheaply first, do part B with `attacks_code`, mode `hybrid` (10 questions), then come back to `golden`.
+
+### C. Runs 2 and 3: `attacks_prompt`, guards on, then off
+
+1. Open **Settings**. Check that every guard toggle is **on**. If you changed any, press **Save** at the bottom.
+2. Open **Evaluations**. Choose dataset `attacks_prompt`, mode `hybrid`, the default evaluators. Press **Run**.
+3. When it is `done`, write down (or screenshot) the table.
+4. Open **Settings**. Switch **all** guard toggles **off** (length, prompt_injection_input, safety_input, prompt_injection_document, pii_secrets_output, hallucination_output, safety_output, citation_output). Press **Save**. Wait for the green "Saved" message.
+5. Open **Evaluations** and run `attacks_prompt` / `hybrid` again with the same evaluators.
+6. When it is `done`, compare the table with the one from step 3. For example, `blocked_by_guard` should drop, and `injection_resisted` may change.
+
+### D. Runs 4 and 5: `attacks_code`, guards on, then off
+
+1. On **Settings**, switch all guards **on** and press **Save**.
+2. Run `attacks_code` / `hybrid` on **Evaluations**. Write down the table.
+3. On **Settings**, switch all guards **off** and press **Save**.
+4. Run `attacks_code` / `hybrid` again. Compare the two tables.
+5. When you are finished, go back to **Settings**, switch all guards **on** and press **Save**, so the chat is protected again.
+
+### E. Compare the three golden experiments in LangSmith
+
+1. On the **Evaluations** page, after the golden run, click the link "All experiments of this dataset in LangSmith". It opens the dataset `rag-lab-golden`.
+2. Open its **Experiments** tab. You should see three experiments named like `golden-dense-...`, `golden-sparse-...` and `golden-hybrid-...`.
+3. Tick the checkbox of each of the three.
+4. Click **Compare**. You see the three side by side, question by question.
+
+### F. The last two checks
+
+**A second run is refused**
+1. Start a run, for example `golden` / `all`.
+2. While the progress bar is moving, open a second browser tab on the same Streamlit address and open **Evaluations**.
+3. Choose any dataset and press **Run**.
+4. You should see a red message: "The backend refused: ... A run is already in progress. Wait until it is finished."
+
+**Experiments survive a restart**
+1. After a run is finished, go to terminal 1 and press `Ctrl+C`. Start the backend again with the command from part A.
+2. Refresh the Evaluations page. It should say that the backend does not know the run any more and that your experiments are still in LangSmith.
+3. Open LangSmith, then `rag-lab-golden`, then **Experiments**. Your earlier experiments should still be listed.
+
+### What to note down
+
+- The table of each run (a screenshot is fine).
+- The exact text of any red error.
+- The result of "a second run is refused" and "experiments survive a restart".
 
 ## You are done when
 

@@ -2,9 +2,9 @@ import os
 import time
 from fastapi import APIRouter, HTTPException
 from langchain_core.tracers.langchain import wait_for_all_tracers
-from langsmith import Client
 from api.schemas import AskRequest, AskResponse, CompareRequest, CompareResponse
 from app.graph import ask
+from app.tracing import langsmith_client
 
 router = APIRouter()
 
@@ -21,11 +21,10 @@ def get_trace_url(run_id: str) -> str | None:
     # (A trace with many steps, like ours with the guards, takes longer to send.)
     wait_for_all_tracers()
 
-    client = Client()
     for _ in range(TRACE_LINK_TRIES):
         try:
-            run = client.read_run(run_id)
-            return client.get_run_url(run=run, project_name=os.environ["LANGSMITH_PROJECT"])
+            run = langsmith_client.read_run(run_id)
+            return langsmith_client.get_run_url(run=run, project_name=os.environ["LANGSMITH_PROJECT"])
         except Exception:
             # LangSmith may need a moment to store the trace. Wait a little and try again.
             time.sleep(TRACE_LINK_WAIT_SECONDS)

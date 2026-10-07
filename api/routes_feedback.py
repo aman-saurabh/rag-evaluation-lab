@@ -1,10 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from langsmith import Client
 from api.schemas import FeedbackRequest
+from app.tracing import find_project_id, langsmith_client
 
 router = APIRouter()
-
-langsmith_client = Client()
 
 
 @router.post("/feedback")
@@ -16,6 +14,7 @@ def save_feedback(request: FeedbackRequest):
             key="user_score",
             score=request.score,
             comment=request.comment or None,
+            session_id=find_project_id(),  # LangSmith needs the project that holds the trace
         )
     except Exception:
         # Do not send the real error back: it could contain details about our keys.

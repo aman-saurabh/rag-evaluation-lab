@@ -74,6 +74,46 @@
   sources:
   - file: nist-ai-600-1-genai-profile.pdf
     page: 8
+- id: A11
+  type: answerable
+  question: What are the four Tiers in NIST CSF 2.0?
+  answer: Partial (Tier 1), Risk Informed (Tier 2), Repeatable (Tier 3) and Adaptive (Tier 4).
+  sources:
+  - file: nist-csf-2.0.pdf
+    page: 12
+  - file: nist-csf-2.0.pdf
+    page: 31
+- id: A12
+  type: answerable
+  question: What does SSDF practice PS.1.1 say?
+  answer: Store all forms of code (source code, executable code and configuration-as-code) based on the
+    principle of least privilege, so that only authorized personnel, tools and services have access.
+  sources:
+  - file: nist-sp-800-218-ssdf.pdf
+    page: 18
+- id: A13
+  type: answerable
+  question: What is the control objective of federation assurance level FAL1 in NIST SP 800-63-4?
+  answer: To protect against forged assertions.
+  sources:
+  - file: nist-sp-800-63-4.pdf
+    page: 47
+- id: A14
+  type: answerable
+  question: What does SSDF practice PO.1.1 require?
+  answer: Identify and document all security requirements for the organization's software development
+    infrastructures and processes, and maintain the requirements over time.
+  sources:
+  - file: nist-sp-800-218-ssdf.pdf
+    page: 14
+- id: A15
+  type: answerable
+  question: How does the Generative AI Profile describe the risk "CBRN Information or Capabilities"?
+  answer: Eased access to or synthesis of materially nefarious information or design capabilities related to
+    chemical, biological, radiological or nuclear weapons or other dangerous materials or agents.
+  sources:
+  - file: nist-ai-600-1-genai-profile.pdf
+    page: 8
 - id: U01
   type: unanswerable
   question: What was Acme's AI budget for Q4?

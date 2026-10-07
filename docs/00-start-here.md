@@ -97,7 +97,8 @@ rag-evaluation-lab/
     ingest.py                PDF -> chunks -> embeddings
     embeddings.py            the HuggingFace embeddings object (used by ingest and retrieve)
     retrieve.py              dense, sparse, hybrid (LangChain retrievers)
-    llm.py                   the two ChatGroq models (fast and strong)
+    llm.py                   the ChatGroq models (fast, strong and the two safety models)
+    tracing.py               the LangSmith client and the id of the project that holds our traces
     guards.py                the guard checks (safety models, PII middleware, citation check)
     graph.py                 the LangGraph flow
     evaluators.py            the evaluators (openevals judges plus a few custom ones)

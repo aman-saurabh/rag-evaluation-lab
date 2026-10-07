@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from groq import Groq
 from langsmith import Client
-from api import routes_ask, routes_documents, routes_feedback, routes_settings
+from api import routes_ask, routes_datasets, routes_documents, routes_evals, routes_feedback, routes_settings
 from app import retrieve as retrieval  # used as retrieval.store, so we always get the current object after a reload
 from app.config import COLLECTION
 from app.embeddings import embeddings
@@ -11,6 +11,8 @@ app.include_router(routes_ask.router)
 app.include_router(routes_documents.router)
 app.include_router(routes_settings.router)
 app.include_router(routes_feedback.router)
+app.include_router(routes_datasets.router)
+app.include_router(routes_evals.router)
 
 
 @app.get("/health")

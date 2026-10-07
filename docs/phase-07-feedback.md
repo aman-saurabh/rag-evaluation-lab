@@ -21,9 +21,12 @@ class FeedbackRequest(BaseModel):
 You do not write the checks by hand. In `api/schemas.py`, `run_id` has the type `UUID` and `score` is `Field(ge=0, le=1)`, so FastAPI rejects a `run_id` that is not a valid UUID (the long id with dashes) and a `score` that is not 0 or 1. Then save it in LangSmith:
 
 ```python
-from langsmith import Client
-Client().create_feedback(run_id, key="user_score", score=score, comment=comment or None)
+from app.tracing import find_project_id, langsmith_client
+langsmith_client.create_feedback(run_id, key="user_score", score=score, comment=comment or None,
+                                 session_id=find_project_id())
 ```
+
+LangSmith now needs the `session_id` (the id of the **project** that holds the trace) when you save feedback. Without it you get a deprecation warning, and in a future version it stops working. `find_project_id()` in `app/tracing.py` returns it: the project from `LANGSMITH_PROJECT`, or, during an evaluation (when traces go into the experiment's own project), the project of the run that is running. It asks LangSmith once and remembers the answer.
 
 Add `routes_feedback.router` in `api/main.py`. Return `{"ok": true}`. If LangSmith fails, catch the error and return a short message (status 502: "LangSmith could not save the feedback"), not the real error, because it could contain details about the keys.
 

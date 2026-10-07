@@ -277,4 +277,4 @@ For a repeatable test of the judge without changing the prompt, run `try_guards.
 - [ ] A hidden answer shows `[REDACTED_...]`.
 - [ ] In `try_guards.py`, the judge accepts a supported answer and blocks a made-up one ("seven functions, invented by Google").
 - [ ] With the experiment, the question about NIST employees is withheld by `hallucination_output`, and with the original `SYSTEM` text it is answered with "I don't know".
-- [ ] You wrote down at least two attacks that got through. They become test data in phase 8.
+- [ ] (Optional) If you found an attack that got through the guards, add it to `data/datasets/attacks_prompt.yaml` (phase 8). The attack run in phase 9 also shows which attacks the guards miss.

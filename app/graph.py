@@ -6,15 +6,14 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import StateGraph, START, END
-from langsmith import Client
 from app.guards import (check_citations, check_hallucination, check_length, check_pii_redaction,
                         check_prompt_injection_input, check_safety, filter_documents, load_settings,
                         pii_middleware, run_guard)
 from app.llm import fast_llm
 from app import retrieve as retrieval  # used as retrieval.bm25, so we always get the current object after a reload
 from app.retrieve import search
+from app.tracing import find_project_id, langsmith_client
 
-langsmith_client = Client()
 
 # Enable "answer from your own general knowledge and still cite [1]." and comment out "reply exactly: I don't know. " for testing blocking by hallucination guard.
 SYSTEM = (
@@ -306,7 +305,9 @@ def save_guard_feedback(run_id, blocked: bool, guard_results: list[dict]) -> Non
                 comment = f"{result['guard']}: {result['detail']}"
 
     try:
-        langsmith_client.create_feedback(run_id, key="guard_blocked", score=score, comment=comment)
+        langsmith_client.create_feedback(
+            run_id, key="guard_blocked", score=score, comment=comment, session_id=find_project_id()
+        )
     except Exception:
         pass  # a LangSmith problem must never break the answer
 

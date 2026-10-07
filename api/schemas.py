@@ -1,5 +1,6 @@
+from typing import Literal
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AskRequest(BaseModel):
@@ -49,6 +50,35 @@ class FeedbackRequest(BaseModel):
     comment: str = ""
 
 
+class DatasetInfo(BaseModel):
+    name: str
+    examples: int
+
+
+class SourceRef(BaseModel):
+    file: str
+    page: int
+
+
+class GoldenItem(BaseModel):
+    """One golden question. extra="forbid" rejects fields we do not know (for example a typo in a field name)."""
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    type: Literal["answerable", "unanswerable", "multi_document"]
+    question: str
+    answer: str | None              # null for a question without an answer
+    sources: list[SourceRef] = []   # the pages that hold the answer
+    notes: str | None = None
+
+
+class AttackItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    attack: str
+
+
 class CompareRequest(BaseModel):
     question: str
 
@@ -57,3 +87,9 @@ class CompareResponse(BaseModel):
     dense: AskResponse
     sparse: AskResponse
     hybrid: AskResponse
+
+
+class EvalRunRequest(BaseModel):
+    dataset: Literal["golden", "attacks_prompt", "attacks_code"]
+    mode: Literal["dense", "sparse", "hybrid", "all"]
+    evaluators: list[str]   # names from ALL_EVALUATORS, checked in the route

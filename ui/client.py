@@ -56,6 +56,46 @@ def feedback(run_id, score, comment):
     return response.json()
 
 
+def list_datasets():
+    response = httpx.get(f"{BASE}/datasets", timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_dataset(name):
+    response = httpx.get(f"{BASE}/datasets/{name}", timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def save_dataset(name, items):
+    response = httpx.put(f"{BASE}/datasets/{name}", json=items, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def eval_options():
+    response = httpx.get(f"{BASE}/evals/options", timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def start_eval(dataset, mode, evaluators):
+    response = httpx.post(
+        f"{BASE}/evals/run",
+        json={"dataset": dataset, "mode": mode, "evaluators": evaluators},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def eval_status(job_id):
+    response = httpx.get(f"{BASE}/evals/{job_id}", timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
 def get_settings():
     response = httpx.get(f"{BASE}/settings", timeout=30)
     response.raise_for_status()

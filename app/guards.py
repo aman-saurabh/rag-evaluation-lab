@@ -177,16 +177,22 @@ def filter_documents(settings: dict, retrieved_docs: list[dict]) -> tuple[list[d
     return kept_docs, guard_results
 
 
+def documents_to_text(retrieved_docs: list[dict]) -> str:
+    """Puts the retrieved documents into one text, numbered like the answer cites them.
+    Example: "[1] first document text\n\n[2] second document text"."""
+    numbered_texts = []
+    for doc_number, retrieved_doc in enumerate(retrieved_docs, start=1):
+        text = retrieved_doc["text"]
+        numbered_texts.append(f"[{doc_number}] {text}")
+    return "\n\n".join(numbered_texts)
+
+
 def check_hallucination(answer: str, retrieved_docs: list[dict]) -> dict:
     """Asks the judge if the answer says only things that the retrieved documents support."""
     if answer.strip().startswith("I don't know"):
         return make_result("hallucination_output", "allow", "no claims to check")
 
-    documents_text = ""
-    for doc_number, retrieved_doc in enumerate(retrieved_docs, start=1):
-        documents_text = documents_text + f"[{doc_number}] {retrieved_doc['text']}\n\n"
-
-    verdict = groundedness_chain.invoke({"context": documents_text, "outputs": answer})
+    verdict = groundedness_chain.invoke({"context": documents_to_text(retrieved_docs), "outputs": answer})
     if verdict.grounded:
         return make_result("hallucination_output", "allow", "supported by the documents")
     return make_result("hallucination_output", "block", verdict.reasoning[:300])
